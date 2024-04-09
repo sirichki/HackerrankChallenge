@@ -1,29 +1,26 @@
 SELECT A.submission_date
-        ,A.UniqueHackerID
-        ,C.hacker_id
-        ,H.name
+        ,B.SUMID
+        ,A.hacker_id
+        ,C.name
 FROM
-(SELECT A.RN
-            ,A.submission_date
-            ,COUNT(DISTINCT B.hacker_id) AS UniqueHackerID
-        FROM ( SELECT ROW_NUMBER() OVER (ORDER BY submission_date) RN
-                        ,submission_date 
-                        FROM Submissions
-                        GROUP BY submission_date 
-                ) A
-        INNER JOIN (SELECT DENSE_RANK() OVER(PARTITION BY hacker_id ORDER BY submission_date) AS RN
-                        ,*
-                        FROM Submissions
-                ) B
-        ON A.RN = B.RN AND A.submission_date = B.submission_date
-        GROUP BY A.RN,A.submission_date ) A
-INNER JOIN (
-SELECT ROW_NUMBER() OVER(PARTITION BY submission_date ORDER BY COUNT(DISTINCT submission_id) DESC,hacker_id) RN
-            ,submission_date
-            ,hacker_id
-            ,COUNT(DISTINCT submission_id) AS MaxSUB
-        FROM Submissions
-        GROUP BY submission_date,hacker_id) C
-ON C.RN=1 AND A.submission_date = C.submission_date
-INNER JOIN Hackers H
-ON C.hacker_id = H.hacker_id
+(SELECT submission_date
+        ,hacker_id
+FROM (
+SELECT submission_date
+        ,hacker_id
+        ,ROW_NUMBER() OVER(PARTITION BY submission_date ORDER BY COUNT(DISTINCT submission_id) DESC,hacker_id) RN
+FROM Submissions
+GROUP BY submission_date,hacker_id) MAXSUB
+WHERE RN = 1) A
+INNER JOIN (SELECT submission_date
+      ,COUNT(DISTINCT hacker_id) SUMID
+FROM (SELECT submission_date
+        ,DENSE_RANK() OVER(PARTITION BY hacker_id ORDER BY submission_date) SDN
+        ,CAST(RIGHT(CONVERT(VARCHAR(10),submission_date,121),2) AS INT) CMP
+        ,hacker_id
+FROM Submissions) cnmini
+WHERE SDN = CMP
+GROUP BY submission_date) B
+ON A.submission_date = B.submission_date
+INNER JOIN Hackers C
+ON A.hacker_id = C.hacker_id
